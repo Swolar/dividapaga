@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearSession = useCallback(() => {
     localStorage.removeItem('session')
+    localStorage.removeItem('demo_user')
     setSession(null)
     setUser(null)
     disconnectSocket()
