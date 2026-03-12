@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client'
 
-const DEMO_MODE = !import.meta.env.VITE_SUPABASE_URL
+const DEMO_MODE = !import.meta.env.VITE_API_URL
 
 // Mock socket for demo mode (no real connection)
 class MockSocket {

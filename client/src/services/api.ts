@@ -2,8 +2,8 @@ import { mockApi, mockUpload } from './mock-api'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
-// Demo mode: off when VITE_SUPABASE_URL is configured
-const DEMO_MODE = !import.meta.env.VITE_SUPABASE_URL
+// Demo mode: active when backend API URL is not configured
+const DEMO_MODE = !import.meta.env.VITE_API_URL
 
 interface RequestOptions {
   method?: string
