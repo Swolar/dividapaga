@@ -12,9 +12,10 @@ import {
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 // Mutable state for demo
-let rooms = [...DEMO_ROOMS]
-let expenses: Record<string, any[]> = JSON.parse(JSON.stringify(DEMO_EXPENSES))
+let rooms: any[] = []
+let expenses: Record<string, any[]> = {}
 let nextExpId = 100
+let isNewUser = true
 
 interface RequestOptions {
   method?: string
@@ -28,13 +29,35 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
   // Auth routes
   if (endpoint === '/auth/signup' && method === 'POST') {
     const b = body as any
-    const user = { ...DEMO_USER, display_name: b?.display_name || 'Demo User', email: b?.email || 'demo@demo.com' }
+    const user = {
+      id: `user-${Date.now()}`,
+      display_name: b?.display_name || 'Novo Usuario',
+      email: b?.email || 'novo@email.com',
+      avatar_url: null,
+      pix_key: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    isNewUser = true
+    rooms = []
+    expenses = {}
     localStorage.setItem('demo_user', JSON.stringify(user))
     return { data: { session: { access_token: 'demo-token', refresh_token: 'demo-refresh' }, user } } as T
   }
 
   if (endpoint === '/auth/login' && method === 'POST') {
-    return { data: { session: { access_token: 'demo-token', refresh_token: 'demo-refresh' }, user: DEMO_USER } } as T
+    const b = body as any
+    // Login com conta demo pre-populada
+    if (b?.email === 'demo@demo.com') {
+      isNewUser = false
+      rooms = [...DEMO_ROOMS]
+      expenses = JSON.parse(JSON.stringify(DEMO_EXPENSES))
+      return { data: { session: { access_token: 'demo-token', refresh_token: 'demo-refresh' }, user: DEMO_USER } } as T
+    }
+    // Login normal - manter estado vazio
+    const stored = localStorage.getItem('demo_user')
+    const user = stored ? JSON.parse(stored) : DEMO_USER
+    return { data: { session: { access_token: 'demo-token', refresh_token: 'demo-refresh' }, user } } as T
   }
 
   if (endpoint === '/auth/me') {
@@ -65,6 +88,15 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
 
   // Dashboard
   if (endpoint === '/dashboard') {
+    if (isNewUser || rooms.length === 0) {
+      return { data: {
+        total_owed: 0,
+        total_receivable: 0,
+        active_rooms: 0,
+        pending_debts: [],
+        pending_credits: [],
+      } } as T
+    }
     return { data: DEMO_DASHBOARD } as T
   }
 
