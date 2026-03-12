@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, DollarSign } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -13,6 +13,8 @@ export function LoginPage() {
   const { login } = useAuth()
   const { addToast } = useToast()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectTo = searchParams.get('redirect')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +27,7 @@ export function LoginPage() {
     try {
       await login(email, password)
       addToast('Login realizado com sucesso!', 'success')
-      navigate('/')
+      navigate(redirectTo || '/')
     } catch (err: any) {
       addToast(err.message || 'Erro ao fazer login', 'error')
     } finally {
@@ -81,7 +83,7 @@ export function LoginPage() {
 
           <p className="text-center text-sm text-slate-400">
             Nao tem conta?{' '}
-            <Link to="/signup" className="text-neon-purple hover:text-neon-blue transition-colors font-medium">
+            <Link to={`/signup${redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`} className="text-neon-purple hover:text-neon-blue transition-colors font-medium">
               Criar conta
             </Link>
           </p>
