@@ -20,9 +20,31 @@ dotenv.config()
 
 const app = express()
 const httpServer = createServer(app)
+
+// CORS config - aceita dominio principal e preview deploys do Vercel
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(s => s.trim())
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permitir requests sem origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true)
+    // Checar se origin esta na lista ou e um preview deploy do Vercel
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true)
+    }
+    callback(null, false)
+  },
+  credentials: true,
+}
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true)
+      if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        return callback(null, true)
+      }
+      callback(null, false)
+    },
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
   },
@@ -30,10 +52,7 @@ const io = new Server(httpServer, {
 
 // Middleware
 app.use(helmet())
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-}))
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use('/api', generalLimiter)
 
@@ -52,16 +71,23 @@ app.use('/api/upload', uploadRoutes)
 
 // Health check
 app.get('/api/health', async (_req, res) => {
-  // Test DB connection
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const { data, error } = await supabase.from('profiles').select('id', { count: 'exact', head: true })
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    db: error ? `error: ${error.message}` : 'connected',
-    tables_ok: !error,
-  })
+  try {
+    const { supabaseAdmin: sb } = await import('./services/supabase.js')
+    const { error } = await sb.from('profiles').select('id', { count: 'exact', head: true })
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      db: error ? `error: ${error.message}` : 'connected',
+      tables_ok: !error,
+    })
+  } catch (err: any) {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      db: `error: ${err.message}`,
+      tables_ok: false,
+    })
+  }
 })
 
 // Socket.io

@@ -26,7 +26,8 @@ expenseRoutes.get('/:roomId/expenses', roomMemberMiddleware, async (req: Authent
     .order('created_at', { ascending: false })
 
   if (error) {
-    res.status(500).json({ message: 'Erro ao listar despesas' })
+    console.error('Erro ao listar despesas:', error)
+    res.status(500).json({ message: error.message || 'Erro ao listar despesas' })
     return
   }
 
@@ -58,7 +59,8 @@ expenseRoutes.post('/:roomId/expenses', roomMemberMiddleware, async (req: Authen
     .single()
 
   if (error) {
-    res.status(500).json({ message: 'Erro ao criar despesa' })
+    console.error('Erro ao criar despesa:', error)
+    res.status(500).json({ message: error.message || 'Erro ao criar despesa' })
     return
   }
 
@@ -97,8 +99,9 @@ expenseRoutes.post('/:roomId/expenses', roomMemberMiddleware, async (req: Authen
     })))
 
   if (splitError) {
+    console.error('Erro ao criar divisoes:', splitError)
     await supabaseAdmin.from('expenses').delete().eq('id', expense.id)
-    res.status(500).json({ message: 'Erro ao criar divisoes' })
+    res.status(500).json({ message: splitError.message || 'Erro ao criar divisoes' })
     return
   }
 

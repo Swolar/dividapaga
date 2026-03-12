@@ -44,6 +44,23 @@ roomRoutes.get('/', async (req: AuthenticatedRequest, res: Response): Promise<vo
 roomRoutes.post('/', validate(createRoomSchema), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { name, description, category, member_limit } = req.body
 
+  // Garantir que o perfil existe ANTES do insert (FK owner_id -> profiles)
+  const { data: existingProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('id', req.userId!)
+    .single()
+
+  if (!existingProfile) {
+    // Buscar dados do user no auth
+    const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(req.userId!)
+    await supabaseAdmin.from('profiles').insert({
+      id: req.userId!,
+      email: authUser?.email || 'unknown',
+      display_name: authUser?.user_metadata?.display_name || authUser?.email?.split('@')[0] || 'Usuário',
+    })
+  }
+
   const { data: room, error } = await supabaseAdmin
     .from('rooms')
     .insert({
@@ -61,13 +78,6 @@ roomRoutes.post('/', validate(createRoomSchema), async (req: AuthenticatedReques
     res.status(500).json({ message: error.message || 'Erro ao criar sala' })
     return
   }
-
-  // Garantir que o perfil existe (FK owner_id -> profiles)
-  await supabaseAdmin.from('profiles').upsert({
-    id: req.userId!,
-    email: 'unknown',
-    display_name: 'Usuário',
-  }, { onConflict: 'id', ignoreDuplicates: true })
 
   // Adicionar criador como owner
   const { error: memberError } = await supabaseAdmin.from('room_members').insert({
