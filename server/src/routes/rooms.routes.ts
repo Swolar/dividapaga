@@ -27,7 +27,8 @@ roomRoutes.get('/', async (req: AuthenticatedRequest, res: Response): Promise<vo
     .is('removed_at', null)
 
   if (error) {
-    res.status(500).json({ message: 'Erro ao listar salas' })
+    console.error('Erro ao listar salas:', error)
+    res.status(500).json({ message: error.message || 'Erro ao listar salas' })
     return
   }
 
@@ -61,12 +62,23 @@ roomRoutes.post('/', validate(createRoomSchema), async (req: AuthenticatedReques
     return
   }
 
+  // Garantir que o perfil existe (FK owner_id -> profiles)
+  await supabaseAdmin.from('profiles').upsert({
+    id: req.userId!,
+    email: 'unknown',
+    display_name: 'Usuário',
+  }, { onConflict: 'id', ignoreDuplicates: true })
+
   // Adicionar criador como owner
-  await supabaseAdmin.from('room_members').insert({
+  const { error: memberError } = await supabaseAdmin.from('room_members').insert({
     room_id: room.id,
     user_id: req.userId!,
     role: 'owner',
   })
+
+  if (memberError) {
+    console.error('Erro ao adicionar membro:', memberError)
+  }
 
   // Log de atividade
   await supabaseAdmin.from('activity_log').insert({

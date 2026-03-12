@@ -51,8 +51,17 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/upload', uploadRoutes)
 
 // Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+app.get('/api/health', async (_req, res) => {
+  // Test DB connection
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const { data, error } = await supabase.from('profiles').select('id', { count: 'exact', head: true })
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    db: error ? `error: ${error.message}` : 'connected',
+    tables_ok: !error,
+  })
 })
 
 // Socket.io
