@@ -56,7 +56,8 @@ roomRoutes.post('/', validate(createRoomSchema), async (req: AuthenticatedReques
     .single()
 
   if (error) {
-    res.status(500).json({ message: 'Erro ao criar sala' })
+    console.error('Erro ao criar sala:', error)
+    res.status(500).json({ message: error.message || 'Erro ao criar sala' })
     return
   }
 

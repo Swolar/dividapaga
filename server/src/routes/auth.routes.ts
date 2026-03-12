@@ -23,9 +23,17 @@ authRoutes.post('/signup', authLimiter, async (req: Request, res: Response): Pro
   })
 
   if (error) {
+    console.error('Erro signup:', error)
     res.status(400).json({ message: error.message })
     return
   }
+
+  // Garante que o perfil existe (fallback caso o trigger falhe)
+  await supabaseAdmin.from('profiles').upsert({
+    id: data.user.id,
+    email,
+    display_name,
+  }, { onConflict: 'id' })
 
   // Sign in to get session
   const { data: session, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
