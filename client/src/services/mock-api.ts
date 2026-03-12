@@ -92,9 +92,9 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
       return { data: {
         total_owed: 0,
         total_receivable: 0,
-        active_rooms: 0,
-        pending_debts: [],
-        pending_credits: [],
+        rooms: [],
+        recent_debts: [],
+        recent_credits: [],
       } } as T
     }
     return { data: DEMO_DASHBOARD } as T
