@@ -104,6 +104,22 @@ inviteRoutes.post('/:token/join', authMiddleware, inviteLimiter, async (req: Aut
     return
   }
 
+  // Garantir que o perfil existe antes de adicionar como membro
+  const { data: existingProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('id', req.userId!)
+    .single()
+
+  if (!existingProfile) {
+    const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(req.userId!)
+    await supabaseAdmin.from('profiles').insert({
+      id: req.userId!,
+      email: authUser?.email || 'unknown',
+      display_name: authUser?.user_metadata?.display_name || authUser?.email?.split('@')[0] || 'Usuário',
+    })
+  }
+
   // Adicionar membro (ou reativar)
   if (existing?.removed_at) {
     await supabaseAdmin

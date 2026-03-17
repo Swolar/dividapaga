@@ -454,8 +454,8 @@ expenseRoutes.get('/:roomId/balances', roomMemberMiddleware, async (req: Authent
 
     return {
       user_id: m.user_id,
-      display_name: profile?.display_name,
-      avatar_url: profile?.avatar_url,
+      display_name: profile?.display_name || 'Usuário',
+      avatar_url: profile?.avatar_url || null,
       total_owed: Math.round(totalOwed * 100) / 100,
       total_receivable: Math.round(totalReceivable * 100) / 100,
       net_balance: Math.round((totalReceivable - totalOwed) * 100) / 100,

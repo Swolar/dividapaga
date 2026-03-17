@@ -230,9 +230,9 @@ export function RoomExpensesPage() {
                   <div>
                     <h3 className="text-base font-semibold text-slate-100">{exp.description}</h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <MemberAvatar name={exp.profiles.display_name} url={exp.profiles.avatar_url} size="sm" />
+                      <MemberAvatar name={exp.profiles?.display_name || 'Usuário'} url={exp.profiles?.avatar_url} size="sm" />
                       <span className="text-xs text-slate-400">
-                        {exp.profiles.display_name} - {timeAgo(exp.created_at)}
+                        {exp.profiles?.display_name || 'Usuário'} - {timeAgo(exp.created_at)}
                       </span>
                     </div>
                   </div>
@@ -255,8 +255,8 @@ export function RoomExpensesPage() {
                     return (
                       <div key={split.id} className="flex items-center justify-between py-1">
                         <div className="flex items-center gap-2">
-                          <MemberAvatar name={split.profiles.display_name} url={split.profiles.avatar_url} size="sm" />
-                          <span className="text-sm text-slate-300">{split.profiles.display_name}</span>
+                          <MemberAvatar name={split.profiles?.display_name || 'Usuário'} url={split.profiles?.avatar_url} size="sm" />
+                          <span className="text-sm text-slate-300">{split.profiles?.display_name || 'Usuário'}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <AmountDisplay amount={-split.amount} size="sm" />

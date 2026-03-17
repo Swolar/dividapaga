@@ -236,13 +236,13 @@ export function RoomOverviewPage() {
               {room.members.map(m => (
                 <div key={m.user_id} className="flex items-center gap-3">
                   <MemberAvatar
-                    name={m.profiles.display_name}
-                    url={m.profiles.avatar_url}
+                    name={m.profiles?.display_name || 'Usuário'}
+                    url={m.profiles?.avatar_url}
                     size="sm"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-slate-200 truncate">
-                      {m.profiles.display_name}
+                      {m.profiles?.display_name || 'Usuário'}
                     </p>
                   </div>
                   {m.role === 'owner' && <Badge variant="info">Criador</Badge>}
