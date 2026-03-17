@@ -148,19 +148,39 @@ roomRoutes.patch('/:roomId', roomOwnerMiddleware, validate(updateRoomSchema), as
   res.json({ data })
 })
 
-// Arquivar sala (soft delete)
+// Apagar sala permanentemente (apenas criador)
 roomRoutes.delete('/:roomId', roomOwnerMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { error } = await supabaseAdmin
-    .from('rooms')
-    .update({ status: 'archived' })
-    .eq('id', req.params.roomId!)
+  const roomId = req.params.roomId!
+
+  // Deletar em cascata: payment_requests -> expense_splits -> expense_items -> expenses -> activity_log -> invite_links -> room_members -> rooms
+  await supabaseAdmin.from('payment_requests').delete().eq('room_id', roomId)
+
+  // Buscar expenses da sala para deletar splits e items
+  const { data: expenses } = await supabaseAdmin
+    .from('expenses')
+    .select('id')
+    .eq('room_id', roomId)
+
+  if (expenses && expenses.length > 0) {
+    const expenseIds = expenses.map(e => e.id)
+    await supabaseAdmin.from('expense_splits').delete().in('expense_id', expenseIds)
+    await supabaseAdmin.from('expense_items').delete().in('expense_id', expenseIds)
+  }
+
+  await supabaseAdmin.from('expenses').delete().eq('room_id', roomId)
+  await supabaseAdmin.from('activity_log').delete().eq('room_id', roomId)
+  await supabaseAdmin.from('invite_links').delete().eq('room_id', roomId)
+  await supabaseAdmin.from('room_members').delete().eq('room_id', roomId)
+
+  const { error } = await supabaseAdmin.from('rooms').delete().eq('id', roomId)
 
   if (error) {
-    res.status(500).json({ message: 'Erro ao arquivar sala' })
+    console.error('Erro ao apagar sala:', error)
+    res.status(500).json({ message: 'Erro ao apagar sala' })
     return
   }
 
-  res.json({ message: 'Sala arquivada com sucesso' })
+  res.json({ message: 'Sala apagada com sucesso' })
 })
 
 // Listar membros

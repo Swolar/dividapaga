@@ -121,16 +121,17 @@ export function RoomOverviewPage() {
     }
   }
 
-  const isOwner = user?.id === room?.owner_id
+  const isOwner = user?.id === room?.owner_id ||
+    (room?.members || []).some(m => m.user_id === user?.id && m.role === 'owner')
 
-  const handleArchive = async () => {
+  const handleDeleteRoom = async () => {
     setArchiving(true)
     try {
       await api(`/rooms/${id}`, { method: 'DELETE' })
-      addToast('Sala arquivada com sucesso!', 'success')
+      addToast('Sala apagada com sucesso!', 'success')
       navigate('/')
     } catch (err: any) {
-      addToast(err.message || 'Erro ao arquivar sala', 'error')
+      addToast(err.message || 'Erro ao apagar sala', 'error')
     } finally {
       setArchiving(false)
       setArchiveModal(false)
@@ -210,7 +211,7 @@ export function RoomOverviewPage() {
             </OutlineButton>
             {isOwner && (
               <OutlineButton size="sm" onClick={() => setArchiveModal(true)} className="!border-red-500/30 !text-red-400 hover:!bg-red-500/10">
-                <Trash2 className="w-4 h-4" /> Arquivar
+                <Trash2 className="w-4 h-4" /> Apagar Sala
               </OutlineButton>
             )}
           </div>
@@ -269,12 +270,12 @@ export function RoomOverviewPage() {
         </div>
       </div>
 
-      {/* Archive Modal */}
-      <Modal open={archiveModal} onClose={() => setArchiveModal(false)} title="Arquivar Sala">
+      {/* Delete Modal */}
+      <Modal open={archiveModal} onClose={() => setArchiveModal(false)} title="Apagar Sala">
         <div className="space-y-4">
           <p className="text-sm text-slate-400">
-            Tem certeza que deseja arquivar a sala <strong className="text-slate-200">{room.name}</strong>?
-            A sala nao aparecera mais no dashboard, mas os dados serao mantidos.
+            Tem certeza que deseja apagar a sala <strong className="text-slate-200">{room.name}</strong>?
+            Todos os dados (despesas, membros, convites) serao removidos permanentemente.
           </p>
           <div className="flex gap-3">
             <OutlineButton size="sm" onClick={() => setArchiveModal(false)} className="flex-1">
@@ -282,11 +283,11 @@ export function RoomOverviewPage() {
             </OutlineButton>
             <GradientButton
               size="sm"
-              onClick={handleArchive}
+              onClick={handleDeleteRoom}
               loading={archiving}
               className="flex-1 !bg-gradient-to-r !from-red-500 !to-red-600"
             >
-              Arquivar
+              Apagar Permanentemente
             </GradientButton>
           </div>
         </div>
