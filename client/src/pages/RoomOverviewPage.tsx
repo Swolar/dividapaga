@@ -55,6 +55,7 @@ export function RoomOverviewPage() {
   const [room, setRoom] = useState<RoomData | null>(null)
   const [balances, setBalances] = useState<BalanceData[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [inviteModal, setInviteModal] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
@@ -71,11 +72,14 @@ export function RoomOverviewPage() {
           api<{ data: RoomData }>(`/rooms/${id}`),
           api<{ data: BalanceData[] }>(`/rooms/${id}/balances`),
         ])
+        if (!roomRes.data) {
+          setError('Sala não encontrada')
+          return
+        }
         setRoom(roomRes.data)
-        setBalances(balancesRes.data)
-      } catch {
-        addToast('Erro ao carregar sala', 'error')
-        navigate('/')
+        setBalances(balancesRes.data || [])
+      } catch (err: any) {
+        setError(err.message || 'Erro ao carregar sala')
       } finally {
         setLoading(false)
       }
@@ -144,7 +148,18 @@ export function RoomOverviewPage() {
     )
   }
 
-  if (!room) return null
+  if (error || !room) {
+    return (
+      <PageContainer>
+        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <p className="text-slate-400 text-sm">{error || 'Sala não encontrada'}</p>
+          <OutlineButton size="sm" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-4 h-4" /> Voltar ao Dashboard
+          </OutlineButton>
+        </div>
+      </PageContainer>
+    )
+  }
 
   const Icon = categoryIcons[room.category] || MoreHorizontal
 
@@ -228,12 +243,12 @@ export function RoomOverviewPage() {
           <GlassCard>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-heading font-semibold text-slate-300">
-                Membros ({room.member_count}/{room.member_limit})
+                Membros ({room.member_count || 0}/{room.member_limit || 10})
               </h3>
               <Users className="w-4 h-4 text-slate-500" />
             </div>
             <div className="space-y-3">
-              {room.members.map(m => (
+              {(room.members || []).map(m => (
                 <div key={m.user_id} className="flex items-center gap-3">
                   <MemberAvatar
                     name={m.profiles?.display_name || 'Usuário'}
