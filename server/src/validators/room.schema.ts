@@ -5,6 +5,7 @@ export const createRoomSchema = z.object({
   description: z.string().max(500).optional(),
   category: z.enum(['jantar', 'balada', 'mercado', 'viagem', 'outro']),
   member_limit: z.number().int().min(2).max(50).default(10),
+  image_url: z.string().url().optional().nullable(),
 })
 
 export const updateRoomSchema = z.object({
@@ -12,5 +13,6 @@ export const updateRoomSchema = z.object({
   description: z.string().max(500).optional(),
   category: z.enum(['jantar', 'balada', 'mercado', 'viagem', 'outro']).optional(),
   member_limit: z.number().int().min(2).max(50).optional(),
+  image_url: z.string().url().optional().nullable(),
   status: z.enum(['active', 'archived', 'closed']).optional(),
 })

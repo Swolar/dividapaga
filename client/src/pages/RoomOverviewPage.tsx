@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Users, Receipt, Link2, Plus, ArrowLeft,
+  Users, Receipt, Link2, Plus, ArrowLeft, Trash2,
   UtensilsCrossed, Music, ShoppingCart, Plane, MoreHorizontal,
 } from 'lucide-react'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -14,6 +14,7 @@ import { AmountDisplay } from '../components/data/AmountDisplay'
 import { CardSkeleton } from '../components/ui/LoadingSkeleton'
 import { Modal } from '../components/ui/Modal'
 import { CopyButton } from '../components/ui/CopyButton'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { api } from '../services/api'
 import { getSocket } from '../services/socket'
@@ -31,6 +32,7 @@ interface RoomData {
   owner_id: string
   member_limit: number
   status: string
+  image_url: string | null
   members: {
     user_id: string
     role: string
@@ -56,6 +58,9 @@ export function RoomOverviewPage() {
   const [inviteModal, setInviteModal] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
+  const [archiveModal, setArchiveModal] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const { user } = useAuth()
   const { addToast } = useToast()
   const navigate = useNavigate()
 
@@ -112,6 +117,22 @@ export function RoomOverviewPage() {
     }
   }
 
+  const isOwner = user?.id === room?.owner_id
+
+  const handleArchive = async () => {
+    setArchiving(true)
+    try {
+      await api(`/rooms/${id}`, { method: 'DELETE' })
+      addToast('Sala arquivada com sucesso!', 'success')
+      navigate('/')
+    } catch (err: any) {
+      addToast(err.message || 'Erro ao arquivar sala', 'error')
+    } finally {
+      setArchiving(false)
+      setArchiveModal(false)
+    }
+  }
+
   if (loading) {
     return (
       <PageContainer>
@@ -139,9 +160,15 @@ export function RoomOverviewPage() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-card bg-gradient-primary flex items-center justify-center">
-              <Icon className="w-5 h-5 text-white" />
-            </div>
+            {room.image_url ? (
+              <div className="w-10 h-10 rounded-card overflow-hidden">
+                <img src={room.image_url} alt={room.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-card bg-gradient-primary flex items-center justify-center">
+                <Icon className="w-5 h-5 text-white" />
+              </div>
+            )}
             <div>
               <h1 className="text-xl font-heading font-bold text-slate-100">{room.name}</h1>
               {room.description && (
@@ -166,6 +193,11 @@ export function RoomOverviewPage() {
             <OutlineButton size="sm" onClick={() => navigate(`/rooms/${id}/expenses`)}>
               <Receipt className="w-4 h-4" /> Despesas
             </OutlineButton>
+            {isOwner && (
+              <OutlineButton size="sm" onClick={() => setArchiveModal(true)} className="!border-red-500/30 !text-red-400 hover:!bg-red-500/10">
+                <Trash2 className="w-4 h-4" /> Arquivar
+              </OutlineButton>
+            )}
           </div>
 
           {/* Balances */}
@@ -221,6 +253,29 @@ export function RoomOverviewPage() {
           </GlassCard>
         </div>
       </div>
+
+      {/* Archive Modal */}
+      <Modal open={archiveModal} onClose={() => setArchiveModal(false)} title="Arquivar Sala">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400">
+            Tem certeza que deseja arquivar a sala <strong className="text-slate-200">{room.name}</strong>?
+            A sala nao aparecera mais no dashboard, mas os dados serao mantidos.
+          </p>
+          <div className="flex gap-3">
+            <OutlineButton size="sm" onClick={() => setArchiveModal(false)} className="flex-1">
+              Cancelar
+            </OutlineButton>
+            <GradientButton
+              size="sm"
+              onClick={handleArchive}
+              loading={archiving}
+              className="flex-1 !bg-gradient-to-r !from-red-500 !to-red-600"
+            >
+              Arquivar
+            </GradientButton>
+          </div>
+        </div>
+      </Modal>
 
       {/* Invite Modal */}
       <Modal open={inviteModal} onClose={() => setInviteModal(false)} title="Convidar Membros">

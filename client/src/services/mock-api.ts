@@ -131,6 +131,14 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
     return { data: newRoom } as T
   }
 
+  // Archive room
+  const archiveMatch = endpoint.match(/^\/rooms\/([\w-]+)$/)
+  if (archiveMatch && method === 'DELETE') {
+    const roomId = archiveMatch[1]!
+    rooms = rooms.map(r => r.id === roomId ? { ...r, status: 'archived' } : r)
+    return { message: 'Sala arquivada com sucesso' } as T
+  }
+
   // Room detail
   const roomDetailMatch = endpoint.match(/^\/rooms\/([\w-]+)$/)
   if (roomDetailMatch && method === 'GET') {
@@ -200,6 +208,35 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
     return { data: { expense: newExp, splits: newExp.expense_splits } } as T
   }
 
+  // Payment requests list
+  const paymentReqListMatch = endpoint.match(/^\/rooms\/([\w-]+)\/payment-requests$/)
+  if (paymentReqListMatch && method === 'GET') {
+    return { data: [] } as T
+  }
+
+  // Submit payment request (proof)
+  const paymentReqCreateMatch = endpoint.match(/^\/rooms\/([\w-]+)\/expenses\/([\w-]+)\/payment-requests$/)
+  if (paymentReqCreateMatch && method === 'POST') {
+    const b = body as any
+    return { data: {
+      id: `pr-${Date.now()}`,
+      split_id: b?.split_id,
+      expense_id: paymentReqCreateMatch[2],
+      room_id: paymentReqCreateMatch[1],
+      requester_id: DEMO_USER.id,
+      proof_url: b?.proof_url,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    } } as T
+  }
+
+  // Approve/reject payment request
+  const reviewReqMatch = endpoint.match(/^\/rooms\/([\w-]+)\/payment-requests\/([\w-]+)$/)
+  if (reviewReqMatch && method === 'PATCH') {
+    const b = body as any
+    return { message: b?.status === 'approved' ? 'Pagamento aprovado' : 'Pagamento rejeitado' } as T
+  }
+
   // Toggle payment
   const splitMatch = endpoint.match(/^\/rooms\/([\w-]+)\/expenses\/([\w-]+)\/splits\/([\w-]+)$/)
   if (splitMatch && method === 'PATCH') {
@@ -249,11 +286,55 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
     return { data: { room_id: 'room-001' }, message: 'Voce entrou na sala!' } as T
   }
 
+  // Admin routes
+  if (endpoint === '/admin/stats') {
+    return { data: {
+      total_users: DEMO_MEMBERS.length,
+      online_users: 1,
+      online_user_ids: [DEMO_USER.id],
+      total_rooms: rooms.length,
+      active_rooms: rooms.filter(r => r.status === 'active').length,
+      total_expenses: Object.values(expenses).flat().length,
+      unpaid_splits: 7,
+      total_pending: 712.16,
+    } } as T
+  }
+
+  if (endpoint === '/admin/users') {
+    return { data: DEMO_MEMBERS.map((m, i) => ({
+      ...m,
+      pix_key: null,
+      is_admin: i === 0,
+      is_online: i === 0,
+      room_count: i < 3 ? 3 : i < 4 ? 2 : 1,
+      expense_count: i < 2 ? 2 : 1,
+      total_owed: i === 0 ? 236 : i === 2 ? 286 : i === 3 ? 190.16 : i === 4 ? 236 : 0,
+      created_at: new Date().toISOString(),
+    })) } as T
+  }
+
+  if (endpoint === '/admin/rooms') {
+    return { data: rooms.map(r => ({
+      ...r,
+      profiles: DEMO_MEMBERS.find(m => m.id === r.owner_id) || { display_name: 'N/A', email: 'n/a' },
+      expense_count: (expenses[r.id] || []).length,
+    })) } as T
+  }
+
+  // Admin actions (archive/delete rooms, reset balances, toggle admin)
+  if (endpoint.startsWith('/admin/')) {
+    return { message: 'Acao executada com sucesso', data: {} } as T
+  }
+
   console.warn(`[Mock API] Unhandled: ${method} ${endpoint}`)
   return { data: null } as T
 }
 
-export async function mockUpload<T>(_endpoint: string, _formData: FormData): Promise<T> {
+export async function mockUpload<T>(endpoint: string, _formData: FormData): Promise<T> {
   await delay(500)
+  // Avatar and room-image endpoints return { url }, receipt returns { path }
+  if (endpoint.includes('/avatar') || endpoint.includes('/room-image')) {
+    return { data: { url: `https://demo.storage/uploads/${Date.now()}.jpg` } } as T
+  }
   return { data: { path: `receipts/demo/${Date.now()}.jpg` } } as T
 }

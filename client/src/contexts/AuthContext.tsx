@@ -8,6 +8,7 @@ interface Profile {
   display_name: string
   avatar_url: string | null
   pix_key: string | null
+  is_admin: boolean
 }
 
 interface Session {
@@ -22,6 +23,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => void
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -95,13 +97,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(profile)
   }, [saveSession])
 
+  const refreshProfile = useCallback(async () => {
+    try {
+      const { data } = await api<{ data: Profile }>('/auth/me')
+      setUser(data)
+    } catch {}
+  }, [])
+
   const logout = useCallback(() => {
     api('/auth/logout', { method: 'POST' }).catch(() => {})
     clearSession()
   }, [clearSession])
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, signup, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

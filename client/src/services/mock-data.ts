@@ -6,6 +6,7 @@ export const DEMO_USER = {
   display_name: 'Tarik Hamdar',
   avatar_url: null,
   pix_key: null,
+  is_admin: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }
@@ -195,7 +196,9 @@ export const DEMO_DASHBOARD = {
     name: r.name,
     category: r.category,
     member_count: r.member_count,
+    member_limit: r.member_limit,
     status: r.status,
+    owner_id: r.owner_id,
   })),
   recent_debts: [
     { expense_id: 'exp-003', room_name: 'Balada Sexta', description: 'Mesa VIP + Garrafa', amount: 200.00, creditor_name: 'Lucas Silva' },

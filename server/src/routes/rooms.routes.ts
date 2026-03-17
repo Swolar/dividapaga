@@ -19,7 +19,7 @@ roomRoutes.get('/', async (req: AuthenticatedRequest, res: Response): Promise<vo
       room_id,
       role,
       rooms (
-        id, name, description, category, icon, owner_id,
+        id, name, description, category, icon, image_url, owner_id,
         member_limit, status, created_at
       )
     `)
@@ -42,7 +42,7 @@ roomRoutes.get('/', async (req: AuthenticatedRequest, res: Response): Promise<vo
 
 // Criar sala
 roomRoutes.post('/', validate(createRoomSchema), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { name, description, category, member_limit } = req.body
+  const { name, description, category, member_limit, image_url } = req.body
 
   // Garantir que o perfil existe ANTES do insert (FK owner_id -> profiles)
   const { data: existingProfile } = await supabaseAdmin
@@ -68,6 +68,7 @@ roomRoutes.post('/', validate(createRoomSchema), async (req: AuthenticatedReques
       description,
       category,
       member_limit,
+      image_url: image_url || null,
       owner_id: req.userId!,
     })
     .select()

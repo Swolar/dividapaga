@@ -5,6 +5,7 @@ import {
   User,
   LogOut,
   DollarSign,
+  Shield,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -15,13 +16,17 @@ const navItems = [
 ]
 
 export function Sidebar() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
+
+  const allItems = user?.is_admin
+    ? [...navItems, { to: '/admin', icon: Shield, label: 'Admin' }]
+    : navItems
 
   return (
     <aside className="hidden md:flex flex-col w-20 lg:w-64 h-screen fixed left-0 top-0 bg-bg-secondary border-r border-border-glass z-40">
@@ -37,7 +42,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 flex flex-col gap-1 px-3 py-4">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {allItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -45,7 +50,9 @@ export function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 rounded-card transition-all duration-200 group ${
                 isActive
-                  ? 'bg-neon-purple/10 text-neon-purple shadow-glow-purple'
+                  ? to === '/admin'
+                    ? 'bg-amber-500/10 text-amber-400 shadow-glow-purple'
+                    : 'bg-neon-purple/10 text-neon-purple shadow-glow-purple'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`
             }

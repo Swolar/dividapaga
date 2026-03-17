@@ -11,6 +11,7 @@ import { inviteRoutes, roomInviteRoutes } from './routes/invites.routes.js'
 import { dashboardRoutes } from './routes/dashboard.routes.js'
 import { uploadRoutes } from './routes/upload.routes.js'
 import { profileRoutes } from './routes/profiles.routes.js'
+import { adminRoutes } from './routes/admin.routes.js'
 import { setupSocket } from './socket/index.js'
 import { authMiddleware } from './middleware/auth.middleware.js'
 import { roomOwnerMiddleware } from './middleware/room-access.middleware.js'
@@ -68,6 +69,7 @@ app.use('/api/invites', inviteRoutes)
 app.use('/api/rooms/:roomId/invites', authMiddleware, roomOwnerMiddleware, roomInviteRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/upload', uploadRoutes)
+app.use('/api/admin', adminRoutes)
 
 // Health check
 app.get('/api/health', async (_req, res) => {

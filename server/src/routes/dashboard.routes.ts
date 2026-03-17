@@ -15,7 +15,7 @@ dashboardRoutes.get('/', async (req: AuthenticatedRequest, res: Response): Promi
     // Salas do usuario
     const { data: memberships } = await supabaseAdmin
       .from('room_members')
-      .select('room_id, rooms(id, name, category, member_limit, status)')
+      .select('room_id, rooms(id, name, category, member_limit, status, image_url, owner_id)')
       .eq('user_id', userId)
       .is('removed_at', null)
 
@@ -96,7 +96,10 @@ dashboardRoutes.get('/', async (req: AuthenticatedRequest, res: Response): Promi
           name: room.name,
           category: room.category,
           member_count: count || 0,
+          member_limit: room.member_limit || 10,
           status: room.status,
+          image_url: room.image_url || null,
+          owner_id: room.owner_id,
         }
       })
     )

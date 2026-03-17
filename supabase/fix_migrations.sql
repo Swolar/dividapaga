@@ -90,8 +90,8 @@ GROUP BY rm.user_id, rm.room_id;
 
 -- 6) Storage bucket para comprovantes
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('receipts', 'receipts', false)
-ON CONFLICT (id) DO NOTHING;
+VALUES ('receipts', 'receipts', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Policies de storage (com DROP IF EXISTS)
 DROP POLICY IF EXISTS "receipts_insert" ON storage.objects;
