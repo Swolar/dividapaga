@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, UserPlus, X } from 'lucide-react'
 import { PageContainer } from '../components/layout/PageContainer'
 import { GlassCard } from '../components/ui/GlassCard'
 import { Input } from '../components/ui/Input'
@@ -26,6 +26,8 @@ export function NewExpensePage() {
   const [splitType, setSplitType] = useState('equal')
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
+  const [guestNames, setGuestNames] = useState<string[]>([])
+  const [guestInput, setGuestInput] = useState('')
   const [loading, setLoading] = useState(false)
   const { addToast } = useToast()
   const navigate = useNavigate()
@@ -52,13 +54,30 @@ export function NewExpensePage() {
     })
   }
 
+  const addGuest = () => {
+    const name = guestInput.trim()
+    if (!name) return
+    if (guestNames.includes(name)) {
+      addToast('Esse nome ja foi adicionado', 'warning')
+      return
+    }
+    setGuestNames(prev => [...prev, name])
+    setGuestInput('')
+  }
+
+  const removeGuest = (name: string) => {
+    setGuestNames(prev => prev.filter(n => n !== name))
+  }
+
+  const totalParticipants = selectedMembers.size + guestNames.length
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!description.trim()) { addToast('Descricao e obrigatoria', 'warning'); return }
     if (!amount) { addToast('Valor e obrigatorio', 'warning'); return }
     if (!receiptFile) { addToast('Comprovante e obrigatorio', 'warning'); return }
-    if (selectedMembers.size === 0) { addToast('Selecione ao menos 1 participante', 'warning'); return }
+    if (totalParticipants === 0) { addToast('Selecione ao menos 1 participante', 'warning'); return }
 
     setLoading(true)
     try {
@@ -76,6 +95,7 @@ export function NewExpensePage() {
           split_type: splitType,
           receipt_url: uploadRes.data.path,
           participants: Array.from(selectedMembers),
+          guest_names: guestNames.length > 0 ? guestNames : undefined,
         },
       })
 
@@ -136,7 +156,7 @@ export function NewExpensePage() {
             {/* Member selection */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-3">
-                Participantes ({selectedMembers.size} selecionados)
+                Participantes ({totalParticipants} selecionados)
               </label>
               <div className="space-y-2">
                 {members.map(m => (
@@ -155,12 +175,12 @@ export function NewExpensePage() {
                       className="sr-only"
                     />
                     <MemberAvatar
-                      name={m.profiles.display_name}
-                      url={m.profiles.avatar_url}
+                      name={m.profiles?.display_name || 'Usuário'}
+                      url={m.profiles?.avatar_url}
                       size="sm"
                     />
                     <span className="text-sm text-slate-200">
-                      {m.profiles.display_name}
+                      {m.profiles?.display_name || 'Usuário'}
                     </span>
                     {selectedMembers.has(m.user_id) && (
                       <div className="ml-auto w-5 h-5 rounded-full bg-neon-purple flex items-center justify-center">
@@ -172,6 +192,59 @@ export function NewExpensePage() {
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* Guest participants */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                <UserPlus className="w-4 h-4 inline mr-1" />
+                Participantes externos
+              </label>
+
+              {/* Guest chips */}
+              {guestNames.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {guestNames.map(name => (
+                    <span
+                      key={name}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 text-xs font-medium"
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => removeGuest(name)}
+                        className="hover:text-amber-100 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Add guest input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={guestInput}
+                  onChange={e => setGuestInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addGuest() } }}
+                  placeholder="Nome da pessoa externa"
+                  maxLength={100}
+                  className="flex-1 glass-input px-4 py-2.5 text-sm text-slate-200 placeholder:text-slate-500"
+                />
+                <button
+                  type="button"
+                  onClick={addGuest}
+                  disabled={!guestInput.trim()}
+                  className="px-4 py-2.5 rounded-card bg-amber-500/15 text-amber-300 text-sm font-medium hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Adicionar
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5">
+                Pessoas que nao estao na sala mas participaram do racha.
+              </p>
             </div>
 
             <GradientButton type="submit" fullWidth loading={loading}>

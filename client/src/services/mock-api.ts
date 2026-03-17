@@ -176,7 +176,32 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
     const b = body as any
     const members = DEMO_ROOM_MEMBERS[roomId] || []
     const participants = b.participants || members.map((m: any) => m.user_id)
-    const perPerson = Math.round((b.total_amount / participants.length) * 100) / 100
+    const guestNames: string[] = b.guest_names || []
+    const totalCount = participants.length + guestNames.length
+    const perPerson = Math.round((b.total_amount / totalCount) * 100) / 100
+
+    const memberSplits = participants.map((uid: string, i: number) => {
+      const member = DEMO_MEMBERS.find(m => m.id === uid)
+      return {
+        id: `split-new-${nextExpId}-${i}`,
+        user_id: uid,
+        guest_name: null,
+        amount: perPerson,
+        is_paid: uid === DEMO_USER.id,
+        paid_at: uid === DEMO_USER.id ? new Date().toISOString() : null,
+        profiles: { display_name: member?.display_name || 'Membro', avatar_url: null },
+      }
+    })
+
+    const guestSplits = guestNames.map((name: string, i: number) => ({
+      id: `split-guest-${nextExpId}-${i}`,
+      user_id: null,
+      guest_name: name,
+      amount: perPerson,
+      is_paid: false,
+      paid_at: null,
+      profiles: null,
+    }))
 
     const newExp = {
       id: `exp-${nextExpId++}`,
@@ -189,17 +214,7 @@ export async function mockApi<T>(endpoint: string, options: RequestOptions = {})
       status: 'active',
       created_at: new Date().toISOString(),
       profiles: { display_name: DEMO_USER.display_name, avatar_url: null },
-      expense_splits: participants.map((uid: string, i: number) => {
-        const member = DEMO_MEMBERS.find(m => m.id === uid)
-        return {
-          id: `split-new-${nextExpId}-${i}`,
-          user_id: uid,
-          amount: perPerson,
-          is_paid: uid === DEMO_USER.id,
-          paid_at: uid === DEMO_USER.id ? new Date().toISOString() : null,
-          profiles: { display_name: member?.display_name || 'Membro', avatar_url: null },
-        }
-      }),
+      expense_splits: [...memberSplits, ...guestSplits],
     }
 
     if (!expenses[roomId]) expenses[roomId] = []

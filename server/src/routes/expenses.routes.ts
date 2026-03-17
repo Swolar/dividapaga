@@ -3,7 +3,7 @@ import type { Response } from 'express'
 import { authMiddleware } from '../middleware/auth.middleware.js'
 import { roomMemberMiddleware } from '../middleware/room-access.middleware.js'
 import { supabaseAdmin } from '../services/supabase.js'
-import { splitEqual, splitByItem, splitManual } from '../services/splits.service.js'
+import { splitEqual, splitByItem, splitManual, type SplitResult } from '../services/splits.service.js'
 import type { AuthenticatedRequest } from '../types/index.js'
 
 export const expenseRoutes = Router()
@@ -17,7 +17,7 @@ expenseRoutes.get('/:roomId/expenses', roomMemberMiddleware, async (req: Authent
     .select(`
       *,
       profiles:created_by(display_name, avatar_url),
-      expense_splits(id, user_id, amount, is_paid, paid_at,
+      expense_splits(id, user_id, guest_name, amount, is_paid, paid_at,
         profiles:user_id(display_name, avatar_url)
       )
     `)
@@ -37,7 +37,7 @@ expenseRoutes.get('/:roomId/expenses', roomMemberMiddleware, async (req: Authent
 // Criar despesa
 expenseRoutes.post('/:roomId/expenses', roomMemberMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { roomId } = req.params
-  const { description, total_amount, split_type, receipt_url, participants, items, manual_splits } = req.body
+  const { description, total_amount, split_type, receipt_url, participants, items, manual_splits, guest_names } = req.body
 
   if (!receipt_url) {
     res.status(400).json({ message: 'Comprovante obrigatorio' })
@@ -65,12 +65,12 @@ expenseRoutes.post('/:roomId/expenses', roomMemberMiddleware, async (req: Authen
   }
 
   // Calcular splits
-  let splits: { user_id: string; amount: number }[]
+  let splits: SplitResult[]
 
   try {
     switch (split_type) {
       case 'equal':
-        splits = splitEqual(total_amount, participants, req.userId!)
+        splits = splitEqual(total_amount, participants, req.userId!, guest_names || [])
         break
       case 'by_item':
         splits = await splitByItem(expense.id, items || [], supabaseAdmin)
@@ -94,7 +94,8 @@ expenseRoutes.post('/:roomId/expenses', roomMemberMiddleware, async (req: Authen
     .from('expense_splits')
     .insert(splits.map(s => ({
       expense_id: expense.id,
-      user_id: s.user_id,
+      user_id: s.user_id || null,
+      guest_name: s.guest_name || null,
       amount: s.amount,
     })))
 
@@ -128,7 +129,7 @@ expenseRoutes.get('/:roomId/expenses/:expenseId', roomMemberMiddleware, async (r
       *,
       profiles:created_by(display_name, avatar_url),
       expense_items(*, expense_item_consumers(user_id, profiles:user_id(display_name))),
-      expense_splits(*, profiles:user_id(display_name, avatar_url))
+      expense_splits(*, guest_name, profiles:user_id(display_name, avatar_url))
     `)
     .eq('id', req.params.expenseId!)
     .eq('room_id', req.params.roomId!)
@@ -443,6 +444,7 @@ expenseRoutes.get('/:roomId/balances', roomMemberMiddleware, async (req: Authent
 
     for (const exp of expenses || []) {
       for (const split of (exp as any).expense_splits || []) {
+        if (!split.user_id) continue // Skip guest splits
         if (split.user_id === m.user_id && !split.is_paid) {
           totalOwed += Number(split.amount)
         }

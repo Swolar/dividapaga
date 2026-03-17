@@ -28,10 +28,11 @@ interface Expense {
   profiles: { display_name: string; avatar_url: string | null }
   expense_splits: {
     id: string
-    user_id: string
+    user_id: string | null
+    guest_name: string | null
     amount: number
     is_paid: boolean
-    profiles: { display_name: string; avatar_url: string | null }
+    profiles: { display_name: string; avatar_url: string | null } | null
   }[]
 }
 
@@ -249,19 +250,31 @@ export function RoomExpensesPage() {
                 {/* Splits */}
                 <div className="border-t border-border-glass pt-3 space-y-2">
                   {exp.expense_splits.map(split => {
+                    const isGuest = !split.user_id
                     const isMySplit = split.user_id === user?.id
                     const pending = hasPendingRequest(split.id)
+                    const displayName = split.profiles?.display_name || split.guest_name || 'Convidado'
 
                     return (
                       <div key={split.id} className="flex items-center justify-between py-1">
                         <div className="flex items-center gap-2">
-                          <MemberAvatar name={split.profiles?.display_name || 'Usuário'} url={split.profiles?.avatar_url} size="sm" />
-                          <span className="text-sm text-slate-300">{split.profiles?.display_name || 'Usuário'}</span>
+                          <MemberAvatar name={displayName} url={split.profiles?.avatar_url} size="sm" />
+                          <span className="text-sm text-slate-300">{displayName}</span>
+                          {isGuest && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">
+                              Convidado
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           <AmountDisplay amount={-split.amount} size="sm" />
 
-                          {split.is_paid ? (
+                          {isGuest ? (
+                            // Guest - no actions
+                            <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                              <span className="text-xs font-bold">$</span>
+                            </div>
+                          ) : split.is_paid ? (
                             // Pago - criador pode desmarcar
                             isExpenseCreator ? (
                               <button

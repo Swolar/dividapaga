@@ -458,6 +458,26 @@ CREATE POLICY "Expense creators can update payment requests"
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS idx_profiles_admin ON profiles(is_admin) WHERE is_admin = true;
 
+-- ========== 015: GUEST SPLITS ==========
+ALTER TABLE expense_splits ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE expense_splits ADD COLUMN IF NOT EXISTS guest_name VARCHAR(100);
+
+ALTER TABLE expense_splits DROP CONSTRAINT IF EXISTS expense_splits_expense_id_user_id_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS expense_splits_member_unique
+  ON expense_splits (expense_id, user_id)
+  WHERE user_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS expense_splits_guest_unique
+  ON expense_splits (expense_id, guest_name)
+  WHERE guest_name IS NOT NULL;
+
+ALTER TABLE expense_splits ADD CONSTRAINT split_member_or_guest
+  CHECK (
+    (user_id IS NOT NULL AND guest_name IS NULL)
+    OR (user_id IS NULL AND guest_name IS NOT NULL)
+  );
+
 -- =============================================
 -- PRONTO! Todas as tabelas, policies, indexes,
 -- views e storage bucket criados.

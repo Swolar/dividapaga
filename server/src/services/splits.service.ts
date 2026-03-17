@@ -1,21 +1,42 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+export interface SplitResult {
+  user_id: string | null
+  guest_name: string | null
+  amount: number
+}
+
 export function splitEqual(
   totalAmount: number,
   participantIds: string[],
-  creatorId: string
-): { user_id: string; amount: number }[] {
-  const count = participantIds.length
+  creatorId: string,
+  guestNames: string[] = []
+): SplitResult[] {
+  const count = participantIds.length + guestNames.length
   if (count === 0) throw new Error('Selecione ao menos 1 participante')
 
   const perPerson = Math.round((totalAmount / count) * 100) / 100
   const totalSplit = perPerson * count
   const diff = Math.round((totalAmount - totalSplit) * 100) / 100
 
-  return participantIds.map(uid => ({
+  const memberSplits: SplitResult[] = participantIds.map(uid => ({
     user_id: uid,
+    guest_name: null,
     amount: uid === creatorId ? perPerson + diff : perPerson,
   }))
+
+  // If creator not in participants, assign rounding diff to first member
+  if (diff !== 0 && !participantIds.includes(creatorId) && memberSplits.length > 0) {
+    memberSplits[0]!.amount += diff
+  }
+
+  const guestSplits: SplitResult[] = guestNames.map(name => ({
+    user_id: null,
+    guest_name: name,
+    amount: perPerson,
+  }))
+
+  return [...memberSplits, ...guestSplits]
 }
 
 export async function splitByItem(
@@ -27,7 +48,7 @@ export async function splitByItem(
     consumer_ids: string[]
   }[],
   supabase: SupabaseClient
-): Promise<{ user_id: string; amount: number }[]> {
+): Promise<SplitResult[]> {
   if (!items.length) throw new Error('Adicione ao menos 1 item')
 
   const userTotals = new Map<string, number>()
@@ -66,6 +87,7 @@ export async function splitByItem(
 
   return Array.from(userTotals.entries()).map(([user_id, amount]) => ({
     user_id,
+    guest_name: null,
     amount: Math.round(amount * 100) / 100,
   }))
 }
@@ -73,7 +95,7 @@ export async function splitByItem(
 export function splitManual(
   totalAmount: number,
   splits: { user_id: string; amount: number }[]
-): { user_id: string; amount: number }[] {
+): SplitResult[] {
   if (!splits.length) throw new Error('Defina valores para ao menos 1 participante')
 
   const sum = splits.reduce((acc, s) => acc + s.amount, 0)
@@ -83,5 +105,5 @@ export function splitManual(
     throw new Error(`Soma das parcelas (R$${sum.toFixed(2)}) difere do total (R$${totalAmount.toFixed(2)})`)
   }
 
-  return splits
+  return splits.map(s => ({ ...s, guest_name: null }))
 }
